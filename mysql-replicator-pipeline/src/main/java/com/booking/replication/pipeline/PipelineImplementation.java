@@ -1,4 +1,4 @@
-package com.booking.replication.streams;
+package com.booking.replication.pipeline;
 
 import java.util.Arrays;
 import java.util.Deque;
@@ -16,8 +16,8 @@ import java.util.function.Predicate;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
-public final class StreamsImplementation<Input, Output> implements Streams<Input, Output> {
-    private static final Logger LOG = Logger.getLogger(StreamsImplementation.class.getName());
+public final class PipelineImplementation<Input, Output> implements Pipeline<Input, Output> {
+    private static final Logger LOG = Logger.getLogger(PipelineImplementation.class.getName());
 
     private final int threads;
     private final int tasks;
@@ -36,7 +36,7 @@ public final class StreamsImplementation<Input, Output> implements Streams<Input
     private Consumer<Exception> handler;
 
     @SuppressWarnings("unchecked")
-    StreamsImplementation(
+    PipelineImplementation(
             int threads,
             int tasks,
             BiFunction<Input, Integer, Integer> partitioner,
@@ -73,7 +73,7 @@ public final class StreamsImplementation<Input, Output> implements Streams<Input
 
         if (this.queues != null) {
             this.from = (task) -> {
-                while ( StreamsImplementation.this.queues[task].size() == 0 ) {
+                while ( PipelineImplementation.this.queues[task].size() == 0 ) {
                     try {
                         Thread.sleep(10);
                     } catch ( Exception e ) {
@@ -81,9 +81,9 @@ public final class StreamsImplementation<Input, Output> implements Streams<Input
                         LOG.warning("&shrug;");
                     }
                 }
-                return StreamsImplementation.this.queues[task].poll();
+                return PipelineImplementation.this.queues[task].poll();
             };
-            this.requeue = (task, input) -> StreamsImplementation.this.queues[task].offerFirst(input);
+            this.requeue = (task, input) -> PipelineImplementation.this.queues[task].offerFirst(input);
         } else if(from != null) {
             this.from = from;
             this.requeue = null;
@@ -98,7 +98,7 @@ public final class StreamsImplementation<Input, Output> implements Streams<Input
         this.post = (post != null)?(post):((output, executing) -> {});
         this.running = new AtomicBoolean();
         this.handling = new AtomicBoolean();
-        this.handler = (exception) -> StreamsImplementation.LOG.log(Level.SEVERE, "error inside streams", exception);
+        this.handler = (exception) -> PipelineImplementation.LOG.log(Level.SEVERE, "error inside streams", exception);
     }
 
     private void process(Input input, int task) {
@@ -118,12 +118,12 @@ public final class StreamsImplementation<Input, Output> implements Streams<Input
                 this.handling.set(false);
             }).start();
         } else {
-            StreamsImplementation.LOG.log(Level.SEVERE, "error inside streams", exception);
+            PipelineImplementation.LOG.log(Level.SEVERE, "error inside streams", exception);
         }
     }
 
     @Override
-    public final Streams<Input, Output> start() {
+    public final Pipeline<Input, Output> start() {
         if ((this.queues != null || this.from != null) && !this.running.getAndSet(true) && this.executor == null) {
             Consumer<Integer> consumer = (partitionNumber) -> {
                 Input input = null;
@@ -157,7 +157,7 @@ public final class StreamsImplementation<Input, Output> implements Streams<Input
     }
 
     @Override
-    public final Streams<Input, Output> wait(long timeout, TimeUnit unit) throws InterruptedException {
+    public final Pipeline<Input, Output> wait(long timeout, TimeUnit unit) throws InterruptedException {
         if (this.running.get() && this.executor != null) {
             this.executor.awaitTermination(timeout, unit);
         }

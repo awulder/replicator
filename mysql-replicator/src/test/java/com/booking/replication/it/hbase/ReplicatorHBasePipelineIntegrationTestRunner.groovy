@@ -404,7 +404,7 @@ class ReplicatorHBasePipelineIntegrationTestRunner extends Specification {
 
         Map<String, Object> configuration = new HashMap<>()
 
-        // Streams
+        // Pipeline
         configuration.put(Replicator.Configuration.REPLICATOR_THREADS, String.valueOf(NUMBER_OF_THREADS))
         configuration.put(Replicator.Configuration.REPLICATOR_TASKS, String.valueOf(NUMBER_OF_TASKS))
 

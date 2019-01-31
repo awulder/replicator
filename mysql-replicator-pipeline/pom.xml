@@ -8,6 +8,6 @@
         <artifactId>replicator</artifactId>
         <version>0.16.0-beta-SNAPSHOT</version>
     </parent>
-    <artifactId>mysql-replicator-streams</artifactId>
-    <name>mysql-replicator-streams</name>
+    <artifactId>mysql-replicator-pipeline</artifactId>
+    <name>mysql-replicator-pipeline</name>
 </project>

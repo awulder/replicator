@@ -1,5 +1,6 @@
 package com.booking.replication.streams;
 
+import com.booking.replication.pipeline.Pipeline;
 import org.junit.Test;
 
 import java.util.concurrent.ThreadLocalRandom;
@@ -9,13 +10,13 @@ import java.util.concurrent.atomic.AtomicInteger;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 
-public class StreamsTest {
+public class PipelineTest {
     @Test
     public void testFromPull() throws InterruptedException {
         AtomicInteger count1 = new AtomicInteger();
         AtomicInteger count2 = new AtomicInteger();
 
-        Streams.<Integer>builder()
+        Pipeline.<Integer>builder()
                 .queue()
                 .fromPull((task) -> {
                     count1.incrementAndGet();
@@ -39,7 +40,7 @@ public class StreamsTest {
 
         int number = ThreadLocalRandom.current().nextInt();
 
-        Streams<Integer, Integer> streams = Streams.<Integer>builder()
+        Pipeline<Integer, Integer> pipeline = Pipeline.<Integer>builder()
                 .queue()
                 .fromPush()
                 .to((value) -> {
@@ -50,8 +51,8 @@ public class StreamsTest {
                 .build()
                 .start();
 
-        streams.push(number);
-        streams.wait(1L, TimeUnit.SECONDS).stop();
+        pipeline.push(number);
+        pipeline.wait(1L, TimeUnit.SECONDS).stop();
 
         assertEquals(1, count1.get());
     }
@@ -61,7 +62,7 @@ public class StreamsTest {
         AtomicInteger count1 = new AtomicInteger();
         AtomicInteger count2 = new AtomicInteger();
 
-        Streams.<Integer>builder()
+        Pipeline.<Integer>builder()
                 .queue()
                 .fromPull((task) -> {
                     int value = ThreadLocalRandom.current().nextInt();
@@ -91,7 +92,7 @@ public class StreamsTest {
         AtomicInteger count1 = new AtomicInteger();
         AtomicInteger count2 = new AtomicInteger();
 
-        Streams.<Integer>builder()
+        Pipeline.<Integer>builder()
                 .queue()
                 .fromPull((task) -> {
                     count1.incrementAndGet();
@@ -116,7 +117,7 @@ public class StreamsTest {
         AtomicInteger count1 = new AtomicInteger();
         AtomicInteger count2 = new AtomicInteger();
 
-        Streams.<Integer>builder()
+        Pipeline.<Integer>builder()
                 .queue()
                 .fromPull((task) -> {
                     count1.incrementAndGet();
@@ -142,7 +143,7 @@ public class StreamsTest {
         AtomicInteger count1 = new AtomicInteger();
         AtomicInteger count2 = new AtomicInteger();
 
-        Streams<Integer, String> streams = Streams.<Integer>builder()
+        Pipeline<Integer, String> pipeline = Pipeline.<Integer>builder()
                 .tasks(10)
                 .threads(10)
                 .queue()
@@ -160,10 +161,10 @@ public class StreamsTest {
                 .start();
 
         while (count2.get() < count1.get()) {
-            streams.wait(1L, TimeUnit.SECONDS);
+            pipeline.wait(1L, TimeUnit.SECONDS);
         }
 
-        streams.stop();
+        pipeline.stop();
 
         assertEquals(count1.get(), count2.get());
     }
@@ -174,7 +175,7 @@ public class StreamsTest {
         AtomicInteger count2 = new AtomicInteger();
         AtomicInteger count3 = new AtomicInteger();
 
-        Streams.<Integer>builder()
+        Pipeline.<Integer>builder()
                 .queue()
                 .fromPull((task) -> {
                     int value = ThreadLocalRandom.current().nextInt();
@@ -212,7 +213,7 @@ public class StreamsTest {
         AtomicInteger count2 = new AtomicInteger();
         AtomicInteger count3 = new AtomicInteger();
 
-        Streams.<Integer>builder()
+        Pipeline.<Integer>builder()
                 .queue()
                 .fromPull((task) -> {
                     int value = ThreadLocalRandom.current().nextInt();
@@ -247,7 +248,7 @@ public class StreamsTest {
     public void testOnException() throws InterruptedException {
         int number = ThreadLocalRandom.current().nextInt();
 
-        Streams<Integer, Integer> streams = Streams.<Integer>builder()
+        Pipeline<Integer, Integer> pipeline = Pipeline.<Integer>builder()
                 .queue()
                 .fromPush()
                 .to((value) -> {
@@ -256,9 +257,9 @@ public class StreamsTest {
                 .build()
                 .start();
 
-        streams.onException((exception) -> assertTrue(NullPointerException.class.isInstance(exception)));
-        streams.push(number);
-        streams.wait(1L, TimeUnit.SECONDS).stop();
+        pipeline.onException((exception) -> assertTrue(NullPointerException.class.isInstance(exception)));
+        pipeline.push(number);
+        pipeline.wait(1L, TimeUnit.SECONDS).stop();
     }
 
     @Test
@@ -268,7 +269,7 @@ public class StreamsTest {
         AtomicInteger count3 = new AtomicInteger();
         AtomicInteger count4 = new AtomicInteger();
 
-        Streams<String, String> streamsDestination = Streams.<String>builder()
+        Pipeline<String, String> pipelineDestination = Pipeline.<String>builder()
                 .tasks(10)
                 .threads(10)
                 .queue()
@@ -280,30 +281,30 @@ public class StreamsTest {
                 .post(input -> count4.incrementAndGet())
                 .build();
 
-        Streams<Integer, String> streamsSource = Streams.<Integer>builder()
+        Pipeline<Integer, String> pipelineSource = Pipeline.<Integer>builder()
                 .fromPush()
                 .process(Object::toString)
                 .process((value) -> {
                     count2.incrementAndGet();
                     return String.format("value=%s", value);
                 })
-                .to(streamsDestination::push)
+                .to(pipelineDestination::push)
                 .build();
 
-        streamsDestination.start();
-        streamsSource.start();
+        pipelineDestination.start();
+        pipelineSource.start();
 
         for (int index = 0; index < 20; index++) {
             count1.incrementAndGet();
-            streamsSource.push(ThreadLocalRandom.current().nextInt());
+            pipelineSource.push(ThreadLocalRandom.current().nextInt());
         }
 
         while (count4.get() < count1.get()) {
-            streamsSource.wait(1L, TimeUnit.SECONDS);
+            pipelineSource.wait(1L, TimeUnit.SECONDS);
         }
 
-        streamsDestination.stop();
-        streamsSource.stop();
+        pipelineDestination.stop();
+        pipelineSource.stop();
 
         assertEquals(count1.get(), count2.get());
         assertEquals(count1.get(), count3.get());

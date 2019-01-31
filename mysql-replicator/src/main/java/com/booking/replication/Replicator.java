@@ -14,7 +14,7 @@ import com.booking.replication.commons.map.MapFlatter;
 import com.booking.replication.coordinator.Coordinator;
 import com.booking.replication.commons.metrics.Metrics;
 import com.booking.replication.supplier.model.RawEvent;
-import com.booking.replication.streams.Streams;
+import com.booking.replication.pipeline.Pipeline;
 import com.booking.replication.supplier.Supplier;
 import com.booking.replication.supplier.mysql.binlog.BinaryLogSupplier;
 import com.fasterxml.jackson.core.type.TypeReference;
@@ -61,8 +61,8 @@ public class Replicator {
     private final Applier applier;
     private final Metrics<?> metrics;
     private final CheckpointApplier checkpointApplier;
-    private final Streams<Collection<AugmentedEvent>, Collection<AugmentedEvent>> destinationStream;
-    private final Streams<RawEvent, Collection<AugmentedEvent>> sourceStream;
+    private final Pipeline<Collection<AugmentedEvent>, Collection<AugmentedEvent>> destinationStream;
+    private final Pipeline<RawEvent, Collection<AugmentedEvent>> sourceStream;
 
     public Replicator(final Map<String, Object> configuration) {
 
@@ -96,7 +96,7 @@ public class Replicator {
 
         this.checkpointApplier = CheckpointApplier.build(configuration, this.coordinator, this.checkpointPath);
 
-        this.destinationStream = Streams.<Collection<AugmentedEvent>>builder()
+        this.destinationStream = Pipeline.<Collection<AugmentedEvent>>builder()
                 .threads(threads)
                 .tasks(tasks)
                 .partitioner((events, totalPartitions) -> {
@@ -116,7 +116,7 @@ public class Replicator {
                     }
                 }).build();
 
-        this.sourceStream = Streams.<RawEvent>builder()
+        this.sourceStream = Pipeline.<RawEvent>builder()
                 .fromPush()
                 .process(this.augmenter)
                 .process(this.seeker)

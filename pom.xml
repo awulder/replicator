@@ -40,7 +40,7 @@
 
     <modules>
         <module>mysql-replicator-commons</module>
-        <module>mysql-replicator-streams</module>
+        <module>mysql-replicator-pipeline</module>
         <module>mysql-replicator-coordinator</module>
         <module>mysql-replicator-supplier-model</module>
         <module>mysql-replicator-supplier</module>
@@ -201,7 +201,7 @@
             </dependency>
             <dependency>
                 <groupId>com.booking.replication</groupId>
-                <artifactId>mysql-replicator-streams</artifactId>
+                <artifactId>mysql-replicator-pipeline</artifactId>
                 <version>${project.version}</version>
             </dependency>
             <dependency>

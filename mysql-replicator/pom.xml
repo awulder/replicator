@@ -94,7 +94,7 @@
         </dependency>
         <dependency>
             <groupId>com.booking.replication</groupId>
-            <artifactId>mysql-replicator-streams</artifactId>
+            <artifactId>mysql-replicator-pipeline</artifactId>
         </dependency>
         <dependency>
             <groupId>com.booking.replication</groupId>
@@ -117,11 +117,13 @@
             <groupId>org.codehaus.groovy</groupId>
             <artifactId>groovy-all</artifactId>
             <version>2.4.15</version>
+            <scope>test</scope>
         </dependency>
         <dependency>
             <groupId>org.codehaus.groovy</groupId>
             <artifactId>groovy-json</artifactId>
             <version>2.4.15</version>
+            <scope>test</scope>
         </dependency>
         <dependency>
             <groupId>org.codehaus.groovy</groupId>
