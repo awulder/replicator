@@ -16,7 +16,7 @@ public class PipelineTest {
         AtomicInteger count1 = new AtomicInteger();
         AtomicInteger count2 = new AtomicInteger();
 
-        Pipeline.<Integer>builder()
+        Pipeline.<Integer>configure()
                 .queue()
                 .fromPull((task) -> {
                     count1.incrementAndGet();
@@ -40,9 +40,9 @@ public class PipelineTest {
 
         int number = ThreadLocalRandom.current().nextInt();
 
-        Pipeline<Integer, Integer> pipeline = Pipeline.<Integer>builder()
+        Pipeline<Integer, Integer> pipeline = Pipeline.<Integer>configure()
                 .queue()
-                .fromPush()
+                .setInputAsCallback()
                 .to((value) -> {
                     count1.incrementAndGet();
                     assertEquals(number, value.intValue());
@@ -62,7 +62,7 @@ public class PipelineTest {
         AtomicInteger count1 = new AtomicInteger();
         AtomicInteger count2 = new AtomicInteger();
 
-        Pipeline.<Integer>builder()
+        Pipeline.<Integer>configure()
                 .queue()
                 .fromPull((task) -> {
                     int value = ThreadLocalRandom.current().nextInt();
@@ -92,7 +92,7 @@ public class PipelineTest {
         AtomicInteger count1 = new AtomicInteger();
         AtomicInteger count2 = new AtomicInteger();
 
-        Pipeline.<Integer>builder()
+        Pipeline.<Integer>configure()
                 .queue()
                 .fromPull((task) -> {
                     count1.incrementAndGet();
@@ -117,7 +117,7 @@ public class PipelineTest {
         AtomicInteger count1 = new AtomicInteger();
         AtomicInteger count2 = new AtomicInteger();
 
-        Pipeline.<Integer>builder()
+        Pipeline.<Integer>configure()
                 .queue()
                 .fromPull((task) -> {
                     count1.incrementAndGet();
@@ -143,7 +143,7 @@ public class PipelineTest {
         AtomicInteger count1 = new AtomicInteger();
         AtomicInteger count2 = new AtomicInteger();
 
-        Pipeline<Integer, String> pipeline = Pipeline.<Integer>builder()
+        Pipeline<Integer, String> pipeline = Pipeline.<Integer>configure()
                 .tasks(10)
                 .threads(10)
                 .queue()
@@ -175,7 +175,7 @@ public class PipelineTest {
         AtomicInteger count2 = new AtomicInteger();
         AtomicInteger count3 = new AtomicInteger();
 
-        Pipeline.<Integer>builder()
+        Pipeline.<Integer>configure()
                 .queue()
                 .fromPull((task) -> {
                     int value = ThreadLocalRandom.current().nextInt();
@@ -213,7 +213,7 @@ public class PipelineTest {
         AtomicInteger count2 = new AtomicInteger();
         AtomicInteger count3 = new AtomicInteger();
 
-        Pipeline.<Integer>builder()
+        Pipeline.<Integer>configure()
                 .queue()
                 .fromPull((task) -> {
                     int value = ThreadLocalRandom.current().nextInt();
@@ -248,9 +248,9 @@ public class PipelineTest {
     public void testOnException() throws InterruptedException {
         int number = ThreadLocalRandom.current().nextInt();
 
-        Pipeline<Integer, Integer> pipeline = Pipeline.<Integer>builder()
+        Pipeline<Integer, Integer> pipeline = Pipeline.<Integer>configure()
                 .queue()
-                .fromPush()
+                .setInputAsCallback()
                 .to((value) -> {
                     throw new NullPointerException();
                 })
@@ -269,11 +269,11 @@ public class PipelineTest {
         AtomicInteger count3 = new AtomicInteger();
         AtomicInteger count4 = new AtomicInteger();
 
-        Pipeline<String, String> pipelineDestination = Pipeline.<String>builder()
+        Pipeline<String, String> pipelineDestination = Pipeline.<String>configure()
                 .tasks(10)
                 .threads(10)
                 .queue()
-                .fromPush()
+                .setInputAsCallback()
                 .to(output -> {
                     count3.incrementAndGet();
                     return true;
@@ -281,8 +281,8 @@ public class PipelineTest {
                 .post(input -> count4.incrementAndGet())
                 .build();
 
-        Pipeline<Integer, String> pipelineSource = Pipeline.<Integer>builder()
-                .fromPush()
+        Pipeline<Integer, String> pipelineSource = Pipeline.<Integer>configure()
+                .setInputAsCallback()
                 .process(Object::toString)
                 .process((value) -> {
                     count2.incrementAndGet();

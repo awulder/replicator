@@ -10,19 +10,23 @@ import java.util.function.Function;
 import java.util.function.Predicate;
 import java.util.logging.Logger;
 
-public final class PipelineBuilder<Input, Output> implements
+public final class PipelineConfigurator<Input, Output> implements
 
-        PipelineBuilderSourceTap<Input, Output>,
+        // every pipe has source & sink
+        SourceTap<Input, Output>,
+        SinkTap<Input, Output>,
 
-        PipelineBuilderSinkTap<Input, Output>,
+        // optionally data transforms and filters
+        DoFn<Input, Output>,
+        DataFilter<Input, Output>,
 
-        StreamsBuilderFilter<Input, Output>,
+        // optionally sink postprocessing
+        SinkPostProcess<Input, Output>,
 
-        StreamsBuilderPost<Input, Output>,
-
+        // build()
         Buildable<Input, Output> {
 
-    private static final Logger LOG = Logger.getLogger(PipelineBuilder.class.getName());
+    private static final Logger LOG = Logger.getLogger(PipelineConfigurator.class.getName());
 
     private int threads;
     private int tasks;
@@ -34,7 +38,7 @@ public final class PipelineBuilder<Input, Output> implements
     private Function<Output, Boolean> to;
     private BiConsumer<Input, Integer> post;
 
-    private PipelineBuilder(
+    private PipelineConfigurator(
             int threads,
             int tasks,
             BiFunction<Input, Integer, Integer> partitioner,
@@ -55,12 +59,12 @@ public final class PipelineBuilder<Input, Output> implements
         this.post = post;
     }
 
-    PipelineBuilder() {
+    PipelineConfigurator() {
         this(0, 1, null, null, null, null, null, null, null);
     }
 
     @Override
-    public final PipelineBuilderSourceTap<Input, Output> threads(int threads) {
+    public final SourceTap<Input, Output> threads(int threads) {
         if (threads > 0) {
             this.threads = threads;
             return this;
@@ -70,7 +74,7 @@ public final class PipelineBuilder<Input, Output> implements
     }
 
     @Override
-    public final PipelineBuilderSourceTap<Input, Output> tasks(int tasks) {
+    public final SourceTap<Input, Output> tasks(int tasks) {
         if (tasks > 0) {
             this.tasks = tasks;
             return this;
@@ -80,41 +84,41 @@ public final class PipelineBuilder<Input, Output> implements
     }
 
     @Override
-    public PipelineBuilderSourceTap<Input, Output> partitioner(BiFunction<Input, Integer, Integer> partitioner) {
+    public SourceTap<Input, Output> partitioner(BiFunction<Input, Integer, Integer> partitioner) {
         Objects.requireNonNull(partitioner);
         this.partitioner = partitioner;
         return this;
     }
 
     @Override
-    public PipelineBuilderSourceTap<Input, Output> queue() {
+    public SourceTap<Input, Output> queue() {
         return this.queue(ConcurrentLinkedDeque.class);
     }
 
     @Override
-    public PipelineBuilderSourceTap<Input, Output> queue(Class<? extends Deque> queueType) {
+    public SourceTap<Input, Output> queue(Class<? extends Deque> queueType) {
         Objects.requireNonNull(queueType);
         this.queueType = queueType;
         return this;
     }
 
     @Override
-    public final StreamsBuilderFilter<Input, Output> fromPull(Function<Integer, Input> supplier) {
+    public final PipelineConfigurator<Input, Output> fromPull(Function<Integer, Input> supplier) {
         Objects.requireNonNull(supplier);
         this.from = supplier;
         return this;
     }
 
     @Override
-    public final StreamsBuilderFilter<Input, Output> fromPush() {
+    public final PipelineConfigurator<Input, Output> setInputAsCallback() {
         this.from = null;
         return this;
     }
 
     @Override
-    public final StreamsBuilderFilter<Input, Output> filter(Predicate<Input> filter) {
+    public final PipelineConfigurator<Input, Output> filter(Predicate<Input> filter) {
         Objects.requireNonNull(filter);
-        return new PipelineBuilder<>(
+        return new PipelineConfigurator<>(
                 this.threads,
                 this.tasks,
                 this.partitioner,
@@ -129,9 +133,9 @@ public final class PipelineBuilder<Input, Output> implements
 
     @Override
     @SuppressWarnings("unchecked")
-    public final <To> PipelineBuilderSinkTap<Input, To> process(Function<Output, To> process) {
+    public final <To> PipelineConfigurator<Input, To> process(Function<Output, To> process) {
         Objects.requireNonNull(process);
-        return new PipelineBuilder<>(
+        return new PipelineConfigurator<>(
                 this.threads,
                 this.tasks,
                 this.partitioner,
@@ -152,9 +156,9 @@ public final class PipelineBuilder<Input, Output> implements
     }
 
     @Override
-    public final StreamsBuilderPost<Input, Output> to(Function<Output, Boolean> to) {
+    public final SinkPostProcess<Input, Output> to(Function<Output, Boolean> to) {
         Objects.requireNonNull(to);
-        return new PipelineBuilder<>(
+        return new PipelineConfigurator<>(
                 this.threads,
                 this.tasks,
                 this.partitioner,
@@ -188,7 +192,7 @@ public final class PipelineBuilder<Input, Output> implements
     @Override
     public final Buildable<Input, Output> post(BiConsumer<Input, Integer> post) {
         Objects.requireNonNull(post);
-        return new PipelineBuilder<>(
+        return new PipelineConfigurator<>(
                 this.threads,
                 this.tasks,
                 this.partitioner,

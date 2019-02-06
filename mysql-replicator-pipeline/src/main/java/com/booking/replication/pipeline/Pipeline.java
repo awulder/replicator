@@ -20,7 +20,7 @@ public interface Pipeline<Input, Output> {
 
     int size();
 
-    static <Input> PipelineBuilderSourceTap<Input, Input> builder() {
-        return new PipelineBuilder<>();
+    static <Input> SourceTap<Input, Input> configure() {
+        return new PipelineConfigurator<>();
     }
 }

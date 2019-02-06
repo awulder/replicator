@@ -4,8 +4,8 @@ import java.util.function.BiConsumer;
 import java.util.function.Consumer;
 import java.util.function.Function;
 
-public interface StreamsBuilderPost<Input, Output> {
-    StreamsBuilderPost<Input, Output> to(Function<Output, Boolean> to);
+public interface SinkPostProcess<Input, Output> {
+    SinkPostProcess<Input, Output> to(Function<Output, Boolean> to);
 
     Buildable<Input, Output> post(Consumer<Input> post);
 

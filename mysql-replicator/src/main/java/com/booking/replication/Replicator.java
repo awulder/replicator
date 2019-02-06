@@ -61,8 +61,8 @@ public class Replicator {
     private final Applier applier;
     private final Metrics<?> metrics;
     private final CheckpointApplier checkpointApplier;
-    private final Pipeline<Collection<AugmentedEvent>, Collection<AugmentedEvent>> destinationStream;
-    private final Pipeline<RawEvent, Collection<AugmentedEvent>> sourceStream;
+    private final Pipeline<Collection<AugmentedEvent>, Collection<AugmentedEvent>> consumerPipeline;
+    private final Pipeline<RawEvent, Collection<AugmentedEvent>> producerPipeline;
 
     public Replicator(final Map<String, Object> configuration) {
 
@@ -96,7 +96,7 @@ public class Replicator {
 
         this.checkpointApplier = CheckpointApplier.build(configuration, this.coordinator, this.checkpointPath);
 
-        this.destinationStream = Pipeline.<Collection<AugmentedEvent>>builder()
+        this.consumerPipeline = Pipeline.<Collection<AugmentedEvent>>configure()
                 .threads(threads)
                 .tasks(tasks)
                 .partitioner((events, totalPartitions) -> {
@@ -108,7 +108,7 @@ public class Replicator {
                     return partitionNumber;
                 })
                 .queue()
-                .fromPush()
+                .setInputAsCallback()
                 .to(this.applier)
                 .post((events, task) -> {
                     for (AugmentedEvent event : events) {
@@ -116,8 +116,8 @@ public class Replicator {
                     }
                 }).build();
 
-        this.sourceStream = Pipeline.<RawEvent>builder()
-                .fromPush()
+        this.producerPipeline = Pipeline.<RawEvent>configure()
+                .setInputAsCallback()
                 .process(this.augmenter)
                 .process(this.seeker)
                 .process(this.augmenterFilter)
@@ -133,7 +133,7 @@ public class Replicator {
                                 .counter("hbase.streams.partitioner.event.apply.success").inc(1L);
                     }
                     for (Collection<AugmentedEvent> splitEvents : splitEventsMap.values()) {
-                        this.destinationStream.push(splitEvents);
+                        this.consumerPipeline.push(splitEvents);
                     }
                     return true;
                 }).build();
@@ -153,10 +153,10 @@ public class Replicator {
                 Replicator.LOG.log(Level.INFO, "starting replicator");
 
                 Replicator.LOG.log(Level.INFO, "starting streams applier");
-                this.destinationStream.start();
+                this.consumerPipeline.start();
 
                 Replicator.LOG.log(Level.INFO, "starting streams supplier");
-                this.sourceStream.start();
+                this.producerPipeline.start();
 
                 Replicator.LOG.log(Level.INFO, "starting supplier");
 
@@ -193,10 +193,10 @@ public class Replicator {
                 this.supplier.stop();
 
                 Replicator.LOG.log(Level.INFO, "stopping streams supplier");
-                this.sourceStream.stop();
+                this.producerPipeline.stop();
 
                 Replicator.LOG.log(Level.INFO, "stopping streams applier");
-                this.destinationStream.stop();
+                this.consumerPipeline.stop();
 
                 Replicator.LOG.log(Level.INFO, "replicator stopped");
             } catch (IOException | InterruptedException exception) {
@@ -204,11 +204,11 @@ public class Replicator {
             }
         });
 
-        this.supplier.onEvent(this.sourceStream::push);
+        this.supplier.onEvent(this.producerPipeline::push);
 
         this.supplier.onException(exceptionHandle);
-        this.sourceStream.onException(exceptionHandle);
-        this.destinationStream.onException(exceptionHandle);
+        this.producerPipeline.onException(exceptionHandle);
+        this.consumerPipeline.onException(exceptionHandle);
 
     }
 
