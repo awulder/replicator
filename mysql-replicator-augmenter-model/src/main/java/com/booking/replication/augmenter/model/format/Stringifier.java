@@ -220,9 +220,16 @@ public class Stringifier {
             } else if (columnType.contains("int")) {
 
                 if (columnType.contains("unsigned")) {
-                    int a = (Integer) cellValue;
-                    long deserializedCellValue = Integer.toUnsignedLong(a);
-                    stringifiedCellValue = String.valueOf(deserializedCellValue);
+                    if( cellValue instanceof byte[] ) {
+                        ByteBuffer byteBuffer = ByteBuffer.wrap((byte[]) cellValue);
+                        long deserializedCellValue = byteBuffer.getLong();
+                        stringifiedCellValue = String.valueOf(deserializedCellValue);
+                        System.out.println("unsigned int byte[]: " + stringifiedCellValue);
+                    } else {
+                        int a = (Integer) cellValue;
+                        long deserializedCellValue = Integer.toUnsignedLong(a);
+                        stringifiedCellValue = String.valueOf(deserializedCellValue);
+                    }
                 } else {
                     int deserializedCellValue = (Integer) cellValue;
                     stringifiedCellValue =  String.valueOf(deserializedCellValue);
