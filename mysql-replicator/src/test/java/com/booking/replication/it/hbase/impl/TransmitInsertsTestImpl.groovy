@@ -34,7 +34,7 @@ class TransmitInsertsTestImpl implements ReplicatorHBasePipelineIntegrationTest 
             ['B', '2', '490705', 'cvjIXQiWLegvLs kXaKH', '1991-01-01', '1991-01-01T13:00:00'],
             ['C', '3', '437616', 'pjFNkiZExAiHkKiJePMp', '1992-01-01', '1992-01-01T14:00:00'],
             ['D', '4', '537616', 'SjFNkiZExAiHkKiJePMp', '1993-01-01', '1993-01-01T15:00:00'],
-            ['E', '5', '637616', 'ajFNkiZExAiHkKiJePMp', '1994-01-01', '1994-01-01T16:00:00']
+            ['E', '5', '4294967295', 'ajFNkiZExAiHkKiJePMp', '1994-01-01', '1994-01-01T16:00:00']
     ]
 
     @Override
@@ -55,7 +55,7 @@ class TransmitInsertsTestImpl implements ReplicatorHBasePipelineIntegrationTest 
                 pk_part_1         varchar(5) NOT NULL DEFAULT '',
                 pk_part_2         int(11)    NOT NULL DEFAULT 0,
                 
-                randomInt         int(11)             DEFAULT NULL,
+                randomInt         int(11)    UNSIGNED DEFAULT NULL,
                 randomVarchar     varchar(32)         DEFAULT NULL,
                 
                 randomDate        date                DEFAULT NULL,
@@ -175,7 +175,7 @@ class TransmitInsertsTestImpl implements ReplicatorHBasePipelineIntegrationTest 
 
                 "3a3ea00c;E;5|${f}:pk_part_1|E",
                 "3a3ea00c;E;5|${f}:pk_part_2|5",
-                "3a3ea00c;E;5|${f}:randomInt|637616",
+                "3a3ea00c;E;5|${f}:randomInt|4294967295", // max unsigned int
                 "3a3ea00c;E;5|${f}:randomVarchar|ajFNkiZExAiHkKiJePMp",
                 "3a3ea00c;E;5|${f}:randomDate|1994-01-01",
                 "3a3ea00c;E;5|${f}:aTimestamp|${getExpectedTimestamp(testRows[4][5])}",

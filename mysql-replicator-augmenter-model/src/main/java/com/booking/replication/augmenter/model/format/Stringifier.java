@@ -4,7 +4,9 @@ import com.booking.replication.augmenter.model.row.RowBeforeAfter;
 import com.booking.replication.augmenter.model.schema.ColumnSchema;
 
 import java.io.Serializable;
+import java.math.BigDecimal;
 import java.math.BigInteger;
+import java.nio.ByteBuffer;
 import java.nio.CharBuffer;
 import java.nio.charset.StandardCharsets;
 import java.sql.Timestamp;
@@ -216,13 +218,22 @@ public class Stringifier {
                     stringifiedCellValue = String.valueOf(Number.class.cast(cellValue).longValue());
                 }
             } else if (columnType.contains("int")) {
+
                 if (columnType.contains("unsigned")) {
-                    stringifiedCellValue = String.valueOf(Long.valueOf(((Integer) cellValue)) & 0x00000000FFFFFFFFl);
+                    int a = (Integer) cellValue;
+                    long deserializedCellValue = Integer.toUnsignedLong(a);
+                    stringifiedCellValue = String.valueOf(deserializedCellValue);
                 } else {
-                    stringifiedCellValue =  String.valueOf(Number.class.cast(cellValue).intValue());
+                    int deserializedCellValue = (Integer) cellValue;
+                    stringifiedCellValue =  String.valueOf(deserializedCellValue);
                 }
             }
 
+            if (columnType.contains("decimal") || columnType.contains("numeric")) {
+                //todo: get precision and decide data type
+                BigDecimal cellValue1 = (BigDecimal) cellValue;
+                stringifiedCellValue = cellValue1.toPlainString();
+            }
 
             if (cache.containsKey(columnType)) {
                 if (columnType.startsWith("enum")) {
