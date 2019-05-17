@@ -7,15 +7,18 @@ import java.util.*;
 public class GtidSetAlgebra {
 
     private final Map<String, Set<String>> serverTransactionRanges;
-    private final  Map<String, Set<Long>> serverTransactionUpperLimits;
-    private final  Map<String, Map<Long, String>> serverTransactionUpperLimitToRange;
+
+    private final Map<String, Set<String>> serverTransactionPrefixIntervals;
+    private final Map<String, Set<Long>> serverLastTransactionIntervalUpperLimits;
+    private final Map<String, Map<Long, String>> serverTransactionUpperLimitToRange;
     private final Map<String, Checkpoint> gtidSetToCheckpoint;
 
     public GtidSetAlgebra() {
         this.serverTransactionRanges = new TreeMap<>();
-        this.serverTransactionUpperLimits = new TreeMap<>();
+        this.serverLastTransactionIntervalUpperLimits = new TreeMap<>();
         this.serverTransactionUpperLimitToRange = new TreeMap<>();
         this.gtidSetToCheckpoint = new TreeMap<>();
+        this.serverTransactionPrefixIntervals = new TreeMap<>();
     }
 
     public synchronized Checkpoint getSafeCheckpoint(List<Checkpoint> checkpointsSeenWithGtidSet) {
@@ -43,9 +46,10 @@ public class GtidSetAlgebra {
         );
 
         serverTransactionUpperLimitToRange.clear();
-        serverTransactionUpperLimits.clear();
+        serverLastTransactionIntervalUpperLimits.clear();
         serverTransactionRanges.clear();
         gtidSetToCheckpoint.clear();
+        serverTransactionPrefixIntervals.clear();
 
         return safeCheckpoint;
     }
@@ -78,7 +82,20 @@ public class GtidSetAlgebra {
         Map<String, String> last = new HashMap<>();
         for (String serverId : filteredGTIDSets.keySet() ) {
             TreeSet<Long> upperLimits = (TreeSet<Long>) filteredGTIDSets.get(serverId);
-            String lastRange =  serverTransactionUpperLimitToRange.get(serverId).get(upperLimits.last());
+            String lastRange =  "";
+            for (String x : serverTransactionPrefixIntervals.get(serverId)) {
+                if (!lastRange.equals("")) {
+                    lastRange += ":" + x;
+                } else {
+                    lastRange = x;
+                }
+            }
+            if (!lastRange.equals("")) {
+                lastRange += ":" + serverTransactionUpperLimitToRange.get(serverId).get(upperLimits.last());
+            } else {
+                lastRange = serverTransactionUpperLimitToRange.get(serverId).get(upperLimits.last());
+                serverTransactionUpperLimitToRange.get(serverId).get(upperLimits.last());
+            }
             last.put(
                     serverId,
                     lastRange
@@ -96,27 +113,39 @@ public class GtidSetAlgebra {
         String [] serverRanges = gtidSet.split(",");
 
         for (String serverRange: serverRanges) {
-            String[] pair = serverRange.split(":");
-            String serverUUID = pair[0];
-            String transactionRange = pair[1];
 
+            String[] slices = serverRange.split(":");
+            String serverUUID = slices[0];
+
+            if (serverTransactionPrefixIntervals.get(serverUUID) == null) {
+                serverTransactionPrefixIntervals.put(serverUUID, new HashSet<>());
+            }
             if (serverTransactionRanges.get(serverUUID) == null) {
                 serverTransactionRanges.put(serverUUID, new HashSet<>());
             }
-            serverTransactionRanges.get(serverUUID).add(transactionRange);
-
-            if (serverTransactionUpperLimits.get(serverUUID) == null) {
-                serverTransactionUpperLimits.put(serverUUID, new TreeSet<>());
+            if (serverLastTransactionIntervalUpperLimits.get(serverUUID) == null) {
+                serverLastTransactionIntervalUpperLimits.put(serverUUID, new TreeSet<>());
             }
-            serverTransactionUpperLimits.get(serverUUID).add(getRangeUpperLimit(transactionRange));
-
             if (serverTransactionUpperLimitToRange.get(serverUUID) == null) {
                 serverTransactionUpperLimitToRange.put(serverUUID, new HashMap<>());
             }
+
+            for (int i = 1; i < slices.length - 1; i++ ) {
+                serverTransactionPrefixIntervals.get(serverUUID).add(slices[i]);
+            }
+
+            // add last slice
+            int lastSliceIndex = slices.length - 1;
+
+            serverTransactionRanges.get(serverUUID).add(slices[lastSliceIndex]);
+
+            serverLastTransactionIntervalUpperLimits.get(serverUUID).add(getRangeUpperLimit(slices[lastSliceIndex]));
+
             serverTransactionUpperLimitToRange.get(serverUUID).put(
-                    getRangeUpperLimit(transactionRange),
-                    transactionRange
+                    getRangeUpperLimit(slices[lastSliceIndex]),
+                    slices[lastSliceIndex]
             );
+
         }
     }
 
@@ -136,7 +165,7 @@ public class GtidSetAlgebra {
 
     private TreeSet<Long> getMaxUninteruptedRangeStartingFromMinimalTransaction (String serverId) {
 
-        TreeSet<Long> range = (TreeSet) serverTransactionUpperLimits.get(serverId);
+        TreeSet<Long> range = (TreeSet) serverLastTransactionIntervalUpperLimits.get(serverId);
         TreeSet<Long> uninteruptedRange = new TreeSet<>();
 
         Long position = range.first();
